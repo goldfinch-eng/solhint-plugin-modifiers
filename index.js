@@ -41,9 +41,7 @@ class EnsureModifiers {
       if (minimatch(thing, rule, {matchBase: true})) {
         if (Array.isArray(rules[rule])) {
           matched = true
-          rules[rule].forEach((r) => {
-            modifiers.add(r)
-          })
+          rules[rule].forEach((r) => modifiers.add(r))
         } else {
           nested = {...nested, ...rules[rule]}
         }
@@ -53,6 +51,10 @@ class EnsureModifiers {
     return {modifiers, nested, matched}
   }
 
+  // Traverse `rules` by `paths`. If a rule matches a given path component,
+  // call `reduceFn` with the matching modifiers and an accumulation of the
+  // modifiers. Recurses into `rules` to find a list of matching modifiers.
+  // `reduceFn` should return an accumulation.
   collectModifiers(rules, paths, reduceFn) {
     let modifiers = new Set()
     let matched = false
@@ -62,8 +64,10 @@ class EnsureModifiers {
       path = path.slice()
       let pathComponent = path.shift()
       while (pathComponent && r) {
+        if (this.opts.verbose) console.log("path", path, "pathComponent", pathComponent, "r", r)
         let result = this.matchRules(r, pathComponent)
         if (result.matched) {
+          if (this.opts.verbose) console.log("match", result)
           matched = matched || result.matched
           modifiers = reduceFn(modifiers, result.modifiers)
         }
@@ -90,6 +94,7 @@ class EnsureModifiers {
       [fileName, contractName, functionName]
     ]
 
+    // Look at override first
     let matched = false
     let result = this.collectModifiers(this.opts.override, paths, (acc, modifiers) => {
       // (Effectively) short circuit rather than collecting
@@ -105,6 +110,7 @@ class EnsureModifiers {
       return result.modifiers
     }
 
+    // Then look at required
     result = this.collectModifiers(this.opts.required, paths, (acc, modifiers) => {
       modifiers.forEach((m) => acc.add(m))
       return acc

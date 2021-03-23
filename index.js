@@ -15,6 +15,7 @@ class EnsureModifiers {
       ignoreVisibility: ["internal"],
       ignoreStateMutability: ["view", "pure"],
       ignoreContractKind: ["abstract", "interface"],
+      verbose: false,
       required: {},
       override: {}
     }
@@ -52,87 +53,64 @@ class EnsureModifiers {
     return {modifiers, nested, matched}
   }
 
-  matchContractOrMethod(rules, contractName, functionName) {
+  collectModifiers(rules, paths, reduceFn) {
     let modifiers = new Set()
-    let contractMethod = `${contractName}.${functionName}`
     let matched = false
 
-    let result = this.matchRules(rules, contractName)
-    matched = matched || result.matched
-    result.modifiers.forEach((m) => modifiers.add(m))
+    paths.forEach((path) => {
+      let r = rules
+      path = path.slice()
+      let pathComponent = path.shift()
+      while (pathComponent && r) {
+        let result = this.matchRules(r, pathComponent)
+        if (result.matched) {
+          matched = matched || result.matched
+          modifiers = reduceFn(modifiers, result.modifiers)
+        }
 
-    result = this.matchRules(result.nested, functionName)
-    matched = matched || result.matched
-    result.modifiers.forEach(modifiers.add)
-
-    result = this.matchRules(rules, contractMethod)
-    matched = matched || result.matched
-    result.modifiers.forEach((m) => modifiers.add(m))
+        pathComponent = path.shift()
+        r = result.nested
+      }
+    })
 
     return {modifiers, matched}
   }
 
   matchedModifiers(contractName, functionName) {
-    // TODO clean this up
     let fileName = this.fileName
 
     let qualifiedContract = `${fileName}:${contractName}`
     let qualifiedContractMethod = `${qualifiedContract}.${functionName}`
+    let contractMethod = `${contractName}.${functionName}`
 
-    let result = this.matchRules(this.opts.override, qualifiedContractMethod)
-    if (result.matched) {
-      return result.modifiers
-    }
+    let paths = [
+      [qualifiedContractMethod],
+      [qualifiedContract, functionName],
+      [fileName, contractMethod],
+      [fileName, contractName, functionName]
+    ]
 
-    result = this.matchRules(this.opts.override, qualifiedContract)
-    if (result.matched) {
-      return result.modifiers
-    }
-    if (Object.keys(result.nested).length) {
-      result = this.matchRules(result.nested, functionName)
-      if (result.matched) {
-        return result.modifiers
-      }
-    }
-
-    result = this.matchRules(this.opts.override, fileName)
-    if (result.matched) {
-      return result.modifiers
-    }
-    if (Object.keys(result.nested).length) {
-      let {modifiers, matched} = this.matchContractOrMethod(result.nested, contractName, functionName)
+    let matched = false
+    let result = this.collectModifiers(this.opts.override, paths, (acc, modifiers) => {
+      // (Effectively) short circuit rather than collecting
       if (matched) {
-        return modifiers
+        return acc
       }
+
+      matched = true
+      return modifiers
+    })
+
+    if (result.matched) {
+      return result.modifiers
     }
 
-    let modifiers = new Set()
+    result = this.collectModifiers(this.opts.required, paths, (acc, modifiers) => {
+      modifiers.forEach((m) => acc.add(m))
+      return acc
+    })
 
-    result = this.matchRules(this.opts.required, qualifiedContractMethod)
-    if (result.modifiers.size) {
-      result.modifiers.forEach((m) => modifiers.add(m))
-    }
-
-    result = this.matchRules(this.opts.required, qualifiedContract)
-    if (result.modifiers.size) {
-      result.modifiers.forEach((m) => modifiers.add(m))
-    }
-    if (Object.keys(result.nested).length) {
-      result = this.matchRules(result.nested, functionName)
-      if (result.modifiers.size) {
-        result.modifiers.forEach((m) => modifiers.add(m))
-      }
-    }
-
-    result = this.matchRules(this.opts.required, fileName)
-    if (result.modifiers.size) {
-      result.modifiers.forEach((m) => modifiers.add(m))
-    }
-    if (Object.keys(result.nested).length) {
-      this.matchContractOrMethod(result.nested, contractName, functionName).forEach((m) => modifiers.add(m))
-    }
-
-    return modifiers
+    return result.modifiers
   }
 
   FunctionDefinition(ctx) {
@@ -150,7 +128,11 @@ class EnsureModifiers {
     try {
       requiredModifiers = this.matchedModifiers(contractName, functionName)
     } catch(err) {
-      console.log(err)
+      if (this.opts.verbose) {
+        console.log(err)
+      }
+
+      throw err
     }
 
     ctx.modifiers.forEach((m) => {

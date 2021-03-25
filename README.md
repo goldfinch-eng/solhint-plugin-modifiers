@@ -1,5 +1,7 @@
 # solhint-plugin-modifiers
 
+[![npm version](https://badge.fury.io/js/solhint-plugin-modifiers.svg)](https://badge.fury.io/js/solhint-plugin-modifiers)
+
 [solhint](https://protofire.github.io/solhint/) plugin for linting function modifiers. Ensure modifiers are present in certain files, contracts, and methods with flexible matching.
 
 ## Installation

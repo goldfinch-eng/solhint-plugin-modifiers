@@ -1,6 +1,6 @@
 {
   "name": "solhint-plugin-modifiers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "solhint plugin for linting function modifiers. Ensure modifiers are present in certain files, contracts, and methods with flexible matching.",
   "main": "index.js",
   "scripts": {
@@ -8,6 +8,14 @@
   },
   "author": "landakram",
   "license": "MIT",
+  "keywords": [
+    "solidity",
+    "solhint",
+    "solhint-plugin",
+    "plugin",
+    "ethereum",
+    "smart-contracts"
+  ],
   "dependencies": {
     "deepmerge": "^4.2.2",
     "minimatch": "^3.0.4"

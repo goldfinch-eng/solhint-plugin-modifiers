@@ -1,7 +1,7 @@
 {
   "name": "solhint-plugin-modifiers",
   "version": "0.0.1",
-  "description": "",
+  "description": "solhint plugin for linting function modifiers. Ensure modifiers are present in certain files, contracts, and methods with flexible matching.",
   "main": "index.js",
   "scripts": {
     "test": "npx mocha test.index.js"

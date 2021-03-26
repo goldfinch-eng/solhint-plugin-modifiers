@@ -60,9 +60,7 @@ The file path, contract name, and method may all be globbed e.g.
   "required": {
     "contracts/core/*.sol": {
       "*.transfer": ["onlyAdmin"],
-      "Token.*": {
-        "transfer": ["onlyMinter"]
-      },
+      "Token.*": ["onlyMinter"]
     },
   }
 }
